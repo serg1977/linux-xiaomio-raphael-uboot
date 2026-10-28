@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e  # 遇到错误立即退出
 
 # 克隆指定版本的内核源码
@@ -11,6 +12,11 @@ patch linux/scripts/package/builddeb < builddeb.patch
 cd linux
 git add .
 git commit -m "builddeb: Add Qcom SM8150 DTBs to boot partition"
+
+# 应用充电控制补丁 (qcom_smbx: Charging / Not charging via status)
+git apply ../charge-limit.patch
+git add .
+git commit -m "qcom_smbx: charge enable control via status"
 
 # 下载内核配置文件
 wget -O arch/arm64/configs/raphael.config https://raw.githubusercontent.com/GengWei1997/kernel-deb/refs/heads/main/uboot-raphael.config
