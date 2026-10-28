@@ -1,0 +1,35 @@
+--- a/drivers/power/supply/qcom_smbx.c	2026-10-28 02:47:18.644989553 +0000
++++ b/drivers/power/supply/qcom_smbx.c	2026-10-28 02:47:18.718166248 +0000
+@@ -639,8 +639,30 @@
+ 
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_STATUS:
+-		return regmap_update_bits(chip->regmap, chip->base + USBIN_CMD_IL,
+-					  USBIN_SUSPEND_BIT, !val->intval);
++		/*
++		 * "Charging" enables charging, "Not charging" disables it
++		 * while USB keeps powering the system (no battery drain).
++		 * "Unknown" keeps the old behaviour: suspend USB input.
++		 */
++		switch (val->intval) {
++		case POWER_SUPPLY_STATUS_CHARGING:
++			regmap_update_bits(chip->regmap, chip->base + USBIN_CMD_IL,
++					   USBIN_SUSPEND_BIT, 0);
++			return regmap_update_bits(chip->regmap,
++						  chip->base + CHARGING_ENABLE_CMD,
++						  CHARGING_ENABLE_CMD_BIT,
++						  CHARGING_ENABLE_CMD_BIT);
++		case POWER_SUPPLY_STATUS_NOT_CHARGING:
++			regmap_update_bits(chip->regmap, chip->base + USBIN_CMD_IL,
++					   USBIN_SUSPEND_BIT, 0);
++			return regmap_update_bits(chip->regmap,
++						  chip->base + CHARGING_ENABLE_CMD,
++						  CHARGING_ENABLE_CMD_BIT, 0);
++		default:
++			return regmap_update_bits(chip->regmap, chip->base + USBIN_CMD_IL,
++						  USBIN_SUSPEND_BIT,
++						  val->intval ? 0 : USBIN_SUSPEND_BIT);
++		}
+ 	case POWER_SUPPLY_PROP_CURRENT_MAX:
+ 		return smb_set_current_limit(chip, val->intval);
+ 	default:
